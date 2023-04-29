@@ -1,85 +1,118 @@
 import express from "express";
+import UsersModel from "./model.js";
 import createHttpError from "http-errors";
-import mongoose from "mongoose";
-import hostOnlyMiddleware from "../../library/authentication/hostOnly.js";
 import { JWTAuthMiddleware } from "../../library/authentication/jwtAuth.js";
 import { createAccessToken } from "../../library/authentication/jwtTools.js";
-import UsersModel from "./model.js";
+import multer from "multer";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import { v2 as cloudinary } from "cloudinary";
+
+const cloudinaryUploader = multer({
+  storage: new CloudinaryStorage({
+    cloudinary,
+    params: {
+      format: "jpeg",
+      folder: "capstone-project"
+    }
+  })
+}).single("avatar");
 
 const usersRouter = express.Router();
 
-//simple post method
-//not required
-usersRouter.post("/", async (req, res, next) => {
-  try {
-    const newUser = new UsersModel(req.body);
-    const { _id } = await newUser.save();
-    res.status(201).send({ _id });
-  } catch (error) {
-    next(error);
-  }
-});
-
-//login user which generates a valid token if the user already exists
-//otherwise, error (first you must register)
-usersRouter.post("/login", async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-    //if the user doesn't exist, cannot generate new token
-    const user = await UsersModel.checkCredentials(email, password);
-    if (user) {
-      const payload = { _id: user._id, role: user.role };
-      const accessToken = await createAccessToken(payload);
-      res.send({ _id: user._id, accessToken });
-    } else {
-      next(createHttpError(401, "Credentials are not ok!"));
-    }
-  } catch (error) {
-    next(error);
-  }
-});
-
-//register user which creates a new user and generates a valid token for him
 usersRouter.post("/register", async (req, res, next) => {
   try {
-    //expectes email, password in req.body
-    const { name, email, password } = req.body;
+    const { email, password, firstName, lastName } = req.body;
     const emailAlreadyRegistered = await UsersModel.findOne({ email: email });
-    if (emailAlreadyRegistered)
-      next(createHttpError(400, `User with provided email already exists`));
+    if (emailAlreadyRegistered) {
+      return next(
+        createHttpError(400, `User with provided email already exists`)
+      );
+    }
     const newUser = new UsersModel(req.body);
     await newUser.save();
-    if (newUser && email && password) {
+    if (
+      (newUser && email && password && firstName && lastName) ||
+      (newUser && email && password && firstName && lastName && avatar)
+    ) {
       const payload = { _id: newUser._id, role: newUser.role };
 
       const accessToken = await createAccessToken(payload);
-      res.status(201).send({ _id: newUser._id, accessToken });
+      res.cookie("accessToken", accessToken, { httpOnly: true });
+      res.status(201).send({ user: newUser });
+      // res.status(201).send();
     }
-    //creates a user
-    //returns a valid token
   } catch (error) {
     next(error);
   }
 });
 
-// //get all users
-// //not required for hw
-usersRouter.get("/", async (req, res, next) => {
+usersRouter.post("/login", async (req, res, next) => {
   try {
-    const users = await UsersModel.find();
-    res.send(users);
+    const { email, password } = req.body;
+    const user = await UsersModel.checkCredentials(email, password);
+    if (user) {
+      const payload = { _id: user._id };
+      const accessToken = await createAccessToken(payload);
+      res.cookie("accessToken", accessToken, { httpOnly: true });
+      res.send({ accessToken, user: user });
+    } else {
+      next(createHttpError(401, "Credentials are not OK!"));
+    }
+  } catch (error) {
+    console.log("Error during log in");
+    next(error);
+  }
+});
+
+usersRouter.post(
+  "/me/avatar",
+  JWTAuthMiddleware,
+  cloudinaryUploader,
+  async (req, res, next) => {
+    try {
+      //we get from req.body the picture we want to upload
+      console.log("ID: ", req.user._id);
+      const url = req.file.path;
+      console.log("URL", url);
+      const updatedUser = await UsersModel.findByIdAndUpdate(
+        req.user._id,
+        { avatar: url },
+        { new: true, runValidators: true }
+      );
+      console.log(updatedUser);
+      if (updatedUser) {
+        res.status(200).send(updatedUser);
+      } else {
+        next(createHttpError(404, `User with id ${req.user._id} not found`));
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+usersRouter.get("/me/:userId", async (req, res, next) => {
+  try {
+    const user = await UsersModel.findById(req.params.userId);
+    res.send({ user: user });
   } catch (error) {
     next(error);
   }
 });
 
-//a user or a host can get his profile
-//put the token in the authorization headers
-//and you will get all the data for a user that matches the token
-usersRouter.get("/me", JWTAuthMiddleware, async (req, res, next) => {
+usersRouter.put("/me", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const user = await UsersModel.findById(req.user._id);
-    res.send(user);
+    if (user) {
+      const updatedUser = await UsersModel.findByIdAndUpdate(
+        req.user._id,
+        req.body,
+        { new: true, runValidators: true }
+      );
+      res.status(200).send(updatedUser);
+    } else {
+      next(createHttpError(404, `User with the provided id not found`));
+    }
   } catch (error) {
     next(error);
   }

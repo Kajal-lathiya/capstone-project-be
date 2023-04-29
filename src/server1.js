@@ -1,42 +1,47 @@
 import express from "express";
-import createHttpError from "http-errors";
-import mongoose from "mongoose";
 import cors from "cors";
-import listEndpoints from "express-list-endpoints";
-import usersRouter from "./apis/users/index.js";
-import productRouter from "./apis/products/index.js";
+import mongoose from "mongoose";
+import usersRouter from "./apis/users11/index.js";
+import adminsRouter from "./apis/admin/index.js";
+
 import {
   badRequestHandler,
   forbiddenHandler,
   genericErrorHAndler,
-  notFoundHandler,
   unauthorizedHandler,
+  notFoundHandler,
 } from "./errorHandlers.js";
-import cookieParser from "cookie-parser";
+import listEndpoints from "express-list-endpoints";
+import cartRouter from "./apis/users11/cartRouter.js";
+import ProductsRouter from "./apis/users11/productsRoutes.js";
+import paymentRouter from "./apis/users11/paymentRouter.js";
 
 const server = express();
 
 const port = process.env.PORT || 3001;
 
-//middlewares
+//MIDDLEWARES
 
 server.use(cors());
 server.use(express.json());
-server.use(cookieParser());
 
-//endpoints
+//ENDPOINTS
 
 server.use("/users", usersRouter);
-server.use("/products", productRouter);
+server.use("/admin", adminsRouter);
+server.use("/products", ProductsRouter);
+server.use("/cart", cartRouter);
+server.use("/payment", paymentRouter);
 
-//error handlers
 
+//ERROR HANDLERS
 server.use(badRequestHandler);
 server.use(unauthorizedHandler);
 server.use(forbiddenHandler);
-server.use(notFoundHandler);
+server.use(notFoundHandler);  
 server.use(genericErrorHAndler);
 
+mongoose.set("strictQuery", true);
 mongoose.connect(process.env.MONGO_URL);
 
 mongoose.connection.on("connected", () => {

@@ -1,19 +1,27 @@
-import mongoose, { model } from "mongoose";
+import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 
-const { Schema } = mongoose;
+const { Schema, model } = mongoose;
 
 const usersSchema = new Schema(
   {
-    name: { type: String, required: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    avatar: { type: String, default: "https://via.placeholder.com/200x200" },
+    role: { type: String, enum: ["user", "admin"] },
+    address: {
+      street: { type: String },
+      number: { type: Number },
+      City: { type: String },
+      ZIP: { type: String }
+    }
     //if I want to implement google OAuth, then the password won't be required
     //because google doesn't share the password with us when performing OAuth
-    role: { type: String, enum: ["admin", "buyer"], default: "buyer" },
   },
   {
-    timestamps: true,
+    timestamps: true
   }
 );
 
