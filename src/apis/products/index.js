@@ -8,14 +8,14 @@ import q2m from "query-to-mongo";
 
 const productRouter = express.Router();
 
-const cloudinaryUploaderSingle = multer({
+const cloudinaryUploader = multer({
   storage: new CloudinaryStorage({
     cloudinary,
     params: {
       format: "jpeg",
-      folder: "Marketpace/products",
-    },
-  }),
+      folder: "capstone-products"
+    }
+  })
 }).single("mainPicture");
 
 const cloudinaryUploaderMultiple = multer({
@@ -23,9 +23,9 @@ const cloudinaryUploaderMultiple = multer({
     cloudinary,
     params: {
       format: "jpeg",
-      folder: "Marketpace/productsAdd",
-    },
-  }),
+      folder: "Marketpace/productsAdd"
+    }
+  })
 }).array("additionalPictures");
 
 productRouter.post("/", async (req, res, next) => {
@@ -40,7 +40,7 @@ productRouter.post("/", async (req, res, next) => {
 
 productRouter.get("/", async (req, res, next) => {
   try {
-      const products = await ProductsModel.find();;
+    const products = await ProductsModel.find();
     if (products) {
       res.send(products);
     } else {
@@ -94,7 +94,7 @@ productRouter.put("/:productId", async (req, res, next) => {
       req.body,
       {
         runValidators: true,
-        new: true,
+        new: true
       }
     );
     if (modifiedProduct) {
@@ -135,14 +135,15 @@ productRouter.delete("/:productId", async (req, res, next) => {
 //multer upload single
 productRouter.post(
   "/:productId/files",
-  cloudinaryUploaderSingle,
+  cloudinaryUploader,
   async (req, res, next) => {
     try {
-      console.log(req.file.path);
+      //we get from req.body the picture we want to upload
+      const url = req.file.path;
       const modifiedProduct = await ProductsModel.findByIdAndUpdate(
         req.params.productId,
         {
-          mainPicture: req.file.path,
+          mainPicture: url
         },
         { runValidators: true, new: true }
       );
@@ -161,6 +162,7 @@ productRouter.post(
     }
   }
 );
+
 productRouter.post(
   "/:productId/filesAdditional",
   cloudinaryUploaderMultiple,
@@ -169,7 +171,7 @@ productRouter.post(
       const modifiedProduct = await ProductsModel.findByIdAndUpdate(
         req.params.productId,
         {
-          additionalPictures: req.files,
+          additionalPictures: req.files
         },
         { runValidators: true, new: true }
       );

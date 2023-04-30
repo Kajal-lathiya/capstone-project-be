@@ -29,7 +29,6 @@ const productsSchema = new Schema(
     condition: {
       type: String,
       enum: ["Used", "Slightly Used", "New"],
-      required: false
     }
   },
   { timestamps: true }
