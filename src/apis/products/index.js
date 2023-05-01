@@ -50,13 +50,35 @@ productRouter.get("/", async (req, res, next) => {
     next(error);
   }
 });
+
+// search by product name
 productRouter.get("/search", async (req, res, next) => {
   try {
+    console.log('req.query--->', req.query);
     const mongoQuery = q2m(req.query);
     const products = await ProductsModel.find(
       mongoQuery.criteria,
       mongoQuery.options.fields
-    ).populate("owner");
+    ).populate("name");
+    if (products) {
+      res.send(products);
+    } else {
+      next(createHttpError(404, "no products found in the database"));
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+// search by categories
+productRouter.get("/category", async (req, res, next) => {
+  try {
+    console.log('req.query--->', req.query);
+    const mongoQuery = q2m(req.query);
+    const products = await ProductsModel.find(
+      mongoQuery.criteria,
+      mongoQuery.options.fields
+    ).populate("category");
     if (products) {
       res.send(products);
     } else {
@@ -190,5 +212,7 @@ productRouter.post(
     }
   }
 );
+
+
 
 export default productRouter;

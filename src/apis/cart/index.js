@@ -85,7 +85,7 @@ cartRouter.delete("/:cartID", async (req, res, next) => {
           req.params.cartID
       );
       if (deleteProduct) {
-        res.status(204).send();
+        res.status(204).send({});
       } else
         next(
           createHttpError(

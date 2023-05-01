@@ -65,17 +65,16 @@ usersRouter.post("/login", async (req, res, next) => {
 });
 
 usersRouter.post(
-  "/me/avatar",
-  JWTAuthMiddleware,
+  "/:userId/avatar",
   cloudinaryUploader,
   async (req, res, next) => {
     try {
       //we get from req.body the picture we want to upload
-      console.log("ID: ", req.user._id);
+      console.log("ID: ", req.params.userId);
       const url = req.file.path;
       console.log("URL", url);
       const updatedUser = await UsersModel.findByIdAndUpdate(
-        req.user._id,
+        req.params.userId,
         { avatar: url },
         { new: true, runValidators: true }
       );
@@ -83,7 +82,9 @@ usersRouter.post(
       if (updatedUser) {
         res.status(200).send(updatedUser);
       } else {
-        next(createHttpError(404, `User with id ${req.user._id} not found`));
+        next(
+          createHttpError(404, `User with id ${req.params.userId} not found`)
+        );
       }
     } catch (error) {
       next(error);
@@ -100,18 +101,37 @@ usersRouter.get("/me/:userId", async (req, res, next) => {
   }
 });
 
-usersRouter.put("/me", JWTAuthMiddleware, async (req, res, next) => {
+// usersRouter.put("/me", JWTAuthMiddleware, async (req, res, next) => {
+//   try {
+//     const user = await UsersModel.findById(req.user._id);
+//     if (user) {
+//       const updatedUser = await UsersModel.findByIdAndUpdate(
+//         req.user._id,
+//         req.body,
+//         { new: true, runValidators: true }
+//       );
+//       res.status(200).send(updatedUser);
+//     } else {
+//       next(createHttpError(404, `User with the provided id not found`));
+//     }
+//   } catch (error) {
+//     next(error);
+//   }
+// });
+// update userprofile
+usersRouter.put("/:userId", async (req, res, next) => {
+  console.log("req.body--->", req.body);
   try {
-    const user = await UsersModel.findById(req.user._id);
+    const user = await UsersModel.findById(req.params.userId);
     if (user) {
       const updatedUser = await UsersModel.findByIdAndUpdate(
-        req.user._id,
+        req.params.userId,
         req.body,
         { new: true, runValidators: true }
       );
       res.status(200).send(updatedUser);
     } else {
-      next(createHttpError(404, `User with the provided id not found`));
+      next(createHttpError(404, `User with ${req.params.userId} not found`));
     }
   } catch (error) {
     next(error);
